@@ -12,9 +12,10 @@ driver = None
 
 
 class QuestionData:
-    def __init__(self, id_number, name, link):
+    def __init__(self, id_number, name, difficulty, link):
         self.id_number = id_number
         self.name = name
+        self.difficulty = difficulty
         self.link = link
 
 
@@ -61,7 +62,7 @@ def reach_to_questions():
 def write_to_file(data):
     serialized_list = [obj.__dict__ for obj in data]
     print(serialized_list)
-    with open("leetcode_questions.json", "w") as json_file:
+    with open("../leetcode_questions.json", "w") as json_file:
         json.dump(serialized_list, json_file, indent=2)
 
 
@@ -70,11 +71,13 @@ def extract_leetcode_questions():
     page_source = driver.page_source
     soup = BeautifulSoup(page_source, 'html.parser')
     questions = soup.findAll('a', {"class": "table-text text-color"})
+    questions_diff = soup.findAll('button', {"id": "diff-btn"})
 
     questions_data = []
     question_id = 0
-    for question in questions:
-        questions_data.append(QuestionData(id_number=question_id, name=question.text, link=question.get("href")))
+    for question, question_diff in zip(questions, questions_diff):
+        questions_data.append(QuestionData(id_number=question_id, name=question.text, difficulty=question_diff.text,
+                                           link=question.get("href")))
         question_id = question_id + 1
 
     write_to_file(questions_data)
