@@ -29,53 +29,59 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // on difficulty change
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  let error = 'difficulty is null'
-  if (message.difficulty) {
-    if (difficulties.includes(message.difficulty)) {
-      questionDifficulty = message.difficulty
-      if (questionDifficulty == 'Random') {
-        getRandomQuestion()
-          .then(() => {
-            redirect()
-            sendResponse('Difficulty has been changed!')
-            return
-          })
-          .catch((error) => {
-            sendResponse('Error changing difficulty: ' + error)
-          })
+  if (message.type == 'difficultyChange') {
+    let error = 'difficulty is null'
+    if (message.difficulty) {
+      if (difficulties.includes(message.difficulty)) {
+        questionDifficulty = message.difficulty
+        if (questionDifficulty == 'Random') {
+          getRandomQuestion()
+            .then(() => {
+              redirect()
+              sendResponse('Difficulty has been changed!')
+              return
+            })
+            .catch((error) => {
+              sendResponse('Error changing difficulty: ' + error)
+            })
+        }
+
+        redirect()
+        sendResponse('Difficulty has been changed!')
+        return
       }
 
-      redirect()
-      sendResponse('Difficulty has been changed!')
-      return
+      error = 'an unfamiliar difficulty was recieved'
     }
 
-    error = 'an unfamiliar difficulty was recieved'
+    sendResponse('Unable to change difficulty, error: ' + error)
+  } else {
+    sendResponse(null)
   }
-
-  sendResponse('Unable to change difficulty, error: ' + error)
 })
 
 // functions
 async function redirect() {
-  try {
-    let result = await getTodaysQuestion()
+  if (!isPassed) {
+    try {
+      let result = await getTodaysQuestion()
 
-    let redirectUrl = result.link
-    let tab = await getCurrentTab()
+      let redirectUrl = result.link
+      let tab = await getCurrentTab()
 
-    shouldRedirect(tab, redirectUrl)
-      .then((result) => {
-        console.log('shouldRedirect : ' + result)
-        if (result) {
-          redirectCurrentTab(tab, redirectUrl)
-        }
-      })
-      .catch((error) => {
-        console.error('Error while redirecting. Error:' + error)
-      })
-  } catch (error) {
-    console.error('Error while redirecting. Error:' + error)
+      shouldRedirect(tab, redirectUrl)
+        .then((result) => {
+          console.log('shouldRedirect : ' + result)
+          if (result) {
+            redirectCurrentTab(tab, redirectUrl)
+          }
+        })
+        .catch((error) => {
+          console.error('Error while redirecting. Error:' + error)
+        })
+    } catch (error) {
+      console.error('Error while redirecting. Error:' + error)
+    }
   }
 }
 
@@ -164,22 +170,28 @@ async function isQuestionAnswered(url) {
   return new Promise((resolve) => {
     chrome.tabs.create({ url: url, active: false }, (tab) => {
       chrome.scripting.executeScript(
-        { target: { tabId: tab.id }, function: getSolvedStatus },
+        { target: { tabId: tab.id }, function: getQuestionStatus },
         async (results) => {
-          chrome.tabs.remove(tab.id)
-          resolve(results[0].result)
+          if (tab.id != 0) {
+            chrome.tabs.remove(tab.id)
+          }
+          const result = await results[0].result
+          resolve(result ? result : false)
         }
       )
     })
   })
 }
 
-// todo: this is still not working - fix this please
-function getSolvedStatus() {
-  // if there is an element, that means the question is solved
-  // document.getElementsByClassName(
-  //   'text-body flex flex-none items-center gap-1 py-1.5 text-text-secondary dark:text-text-secondary'
-  // ).length > 0
-
-  return true
+function getQuestionStatus() {
+  return new Promise((resolve) => {
+    resolve(false)
+    // chrome.runtime.sendMessage({ type: 'getQuestionStatus' }, (response) => {
+    //   if (response.error) {
+    //     resolve(response.error)
+    //   } else {
+    //     resolve(response.message)
+    //   }
+    // })
+  })
 }
