@@ -21,32 +21,3 @@ function requestDiffChange(difficulty) {
     }
   )
 }
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type == 'getQuestionStatus') {
-    let errorMessage = 'Unable to fetch question completion status. Error: '
-
-    getSolvedStatus()
-      .then((result) => {
-        sendResponse({ message: result })
-      })
-      .catch((exception) => {
-        sendResponse({ error: errorMessage.concat(exception) })
-      })
-
-    return true
-  } else {
-    sendResponse(null)
-  }
-})
-
-function getSolvedStatus() {
-  return new Promise((resolve) => {
-    let result = false
-    resolve(result)
-  })
-}
-
-// document.getElementsByClassName(
-//   'text-body flex flex-none items-center gap-1 py-1.5 text-text-secondary dark:text-text-secondary'
-// ).length > 0

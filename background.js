@@ -1,24 +1,28 @@
 let isPassed = false
-let todaysQuestion
+let todaysQuestion = null
 let questionDifficulty = 'Random'
 const difficulties = ['Easy', 'Medium', 'Hard', 'Random']
 
 // event handlers
 // on installation
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log('Code Blocker extension installed.')
-  chrome.alarms.create('resetVariable', { periodInMinutes: 24 * 60 })
+
+  await chrome.alarms.create('resetVariable', {
+    periodInMinutes: 60 * 24,
+  })
 })
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'resetVariable') {
+    console.log('isPassed varriable has been reset')
     isPassed = false
   }
 })
 
 // on every tab update
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (todaysQuestion && tab.url.includes(todaysQuestion.link)) {
+  if (todaysQuestion !== null && tab.url.includes(todaysQuestion.link)) {
     return
   }
 
@@ -55,30 +59,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     sendResponse('Unable to change difficulty, error: ' + error)
-  } else {
-    sendResponse(null)
   }
 })
 
-// functions
+// response for requesting questionStatus
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.type === 'questionStatus') {
+    try {
+      console.log('response for requesting questionStatus')
+      isPassed = await message.status
+      console.log(isPassed)
+    } catch (error) {
+      isPassed = false
+      console.error("Can't extract question-status, error: " + error)
+    }
+  }
+})
+
 async function redirect() {
   if (!isPassed) {
     try {
       let result = await getTodaysQuestion()
-
       let redirectUrl = result.link
-      let tab = await getCurrentTab()
 
-      shouldRedirect(tab, redirectUrl)
-        .then((result) => {
-          console.log('shouldRedirect : ' + result)
-          if (result) {
-            redirectCurrentTab(tab, redirectUrl)
-          }
-        })
-        .catch((error) => {
-          console.error('Error while redirecting. Error:' + error)
-        })
+      let tab = await getCurrentTab()
+      let isRedirectNeeded = await shouldRedirect(tab, redirectUrl)
+      if (isRedirectNeeded) {
+        redirectCurrentTab(tab, redirectUrl)
+      }
     } catch (error) {
       console.error('Error while redirecting. Error:' + error)
     }
@@ -141,7 +149,7 @@ async function getRandomQuestion() {
 
     const randomIndex = Math.floor(Math.random() * questionsAmount)
     // const randomQuestion = questions[randomIndex]
-    const randomQuestion = questions[6]
+    const randomQuestion = questions[4]
 
     todaysQuestion = randomQuestion
     return todaysQuestion
@@ -154,10 +162,9 @@ async function shouldRedirect(currentTab, redirectUrl) {
   const currentUrl = currentTab.url
   return new Promise((resolve, reject) => {
     if (!currentUrl.includes(redirectUrl) || !isPassed) {
-      isQuestionAnswered(redirectUrl)
-        .then((result) => {
-          isPassed = result
-          resolve(!currentUrl.includes(redirectUrl) && !result)
+      requestQuestionStatus(redirectUrl)
+        .then(() => {
+          resolve(!currentUrl.includes(redirectUrl) && !isPassed)
         })
         .catch((error) => {
           reject('Problem to detrmine is question is answered, error: ' + error)
@@ -166,32 +173,24 @@ async function shouldRedirect(currentTab, redirectUrl) {
   })
 }
 
-async function isQuestionAnswered(url) {
-  return new Promise((resolve) => {
+function requestQuestionStatus(url) {
+  return new Promise((resolve, reject) => {
     chrome.tabs.create({ url: url, active: false }, (tab) => {
-      chrome.scripting.executeScript(
-        { target: { tabId: tab.id }, function: getQuestionStatus },
-        async (results) => {
-          if (tab.id != 0) {
-            chrome.tabs.remove(tab.id)
+      chrome.scripting
+        .executeScript({
+          target: { tabId: tab.id },
+          files: ['htmlExtractor.js'],
+        })
+        .then(() => {
+          try {
+            if (tab.id != 0) {
+              chrome.tabs.remove(tab.id)
+            }
+            resolve()
+          } catch (error) {
+            reject(error)
           }
-          const result = await results[0].result
-          resolve(result ? result : false)
-        }
-      )
+        })
     })
-  })
-}
-
-function getQuestionStatus() {
-  return new Promise((resolve) => {
-    resolve(false)
-    // chrome.runtime.sendMessage({ type: 'getQuestionStatus' }, (response) => {
-    //   if (response.error) {
-    //     resolve(response.error)
-    //   } else {
-    //     resolve(response.message)
-    //   }
-    // })
   })
 }
