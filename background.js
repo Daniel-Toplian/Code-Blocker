@@ -27,7 +27,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 
   if (changeInfo.status === 'loading') {
-    redirect()
+    execute()
   }
 })
 
@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (questionDifficulty == 'Random') {
           getRandomQuestion()
             .then(() => {
-              redirect()
+              execute()
               sendResponse('Difficulty has been changed!')
               return
             })
@@ -50,7 +50,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             })
         }
 
-        redirect()
+        execute()
         sendResponse('Difficulty has been changed!')
         return
       }
@@ -69,6 +69,11 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       console.log('response for requesting questionStatus')
       isPassed = await message.status
       console.log(isPassed)
+      let currentTab = await getCurrentTab()
+
+      if (!currentTab.url.includes(todaysQuestion.link) && !isPassed) {
+        redirectCurrentTab(currentTab, todaysQuestion.link)
+      }
     } catch (error) {
       isPassed = false
       console.error("Can't extract question-status, error: " + error)
@@ -76,16 +81,13 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   }
 })
 
-async function redirect() {
+async function execute() {
   if (!isPassed) {
     try {
-      let result = await getTodaysQuestion()
-      let redirectUrl = result.link
-
-      let tab = await getCurrentTab()
-      let isRedirectNeeded = await shouldRedirect(tab, redirectUrl)
-      if (isRedirectNeeded) {
-        redirectCurrentTab(tab, redirectUrl)
+      const question = await getTodaysQuestion()
+      const currentTab = await getCurrentTab()
+      if (!currentTab.url.includes(question.link)) {
+        await requestQuestionStatus(question.link)
       }
     } catch (error) {
       console.error('Error while redirecting. Error:' + error)
@@ -148,8 +150,7 @@ async function getRandomQuestion() {
     const questionsAmount = Object.keys(questions).length
 
     const randomIndex = Math.floor(Math.random() * questionsAmount)
-    // const randomQuestion = questions[randomIndex]
-    const randomQuestion = questions[4]
+    const randomQuestion = questions[randomIndex]
 
     todaysQuestion = randomQuestion
     return todaysQuestion
@@ -158,24 +159,9 @@ async function getRandomQuestion() {
   }
 }
 
-async function shouldRedirect(currentTab, redirectUrl) {
-  const currentUrl = currentTab.url
+function requestQuestionStatus(questionUrl) {
   return new Promise((resolve, reject) => {
-    if (!currentUrl.includes(redirectUrl) || !isPassed) {
-      requestQuestionStatus(redirectUrl)
-        .then(() => {
-          resolve(!currentUrl.includes(redirectUrl) && !isPassed)
-        })
-        .catch((error) => {
-          reject('Problem to detrmine is question is answered, error: ' + error)
-        })
-    }
-  })
-}
-
-function requestQuestionStatus(url) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url: url, active: false }, (tab) => {
+    chrome.tabs.create({ url: questionUrl, active: false }, (tab) => {
       chrome.scripting
         .executeScript({
           target: { tabId: tab.id },
