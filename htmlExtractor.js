@@ -6,11 +6,12 @@ function getQuestionStatus() {
       divs.forEach((div) => {
         if (div.innerHTML.includes('Solved')) {
           resolve(true)
+          return
         }
       })
 
       resolve(false)
-    }, 1)
+    }, 1000)
   })
 }
 
