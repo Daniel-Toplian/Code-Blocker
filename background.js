@@ -150,8 +150,8 @@ async function getRandomQuestion() {
     const questionsAmount = Object.keys(questions).length
 
     const randomIndex = Math.floor(Math.random() * questionsAmount)
-    // const randomQuestion = questions[randomIndex]
-    const randomQuestion = questions[6]
+    const randomQuestion = questions[randomIndex]
+    // const randomQuestion = questions[6]
 
     todaysQuestion = randomQuestion
     return todaysQuestion
