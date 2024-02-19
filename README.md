@@ -37,7 +37,7 @@ A new day a new question. If not answerd, your current tab will redirect to a Le
 ## The Question Extractor
 
 Inside this repo there is an ExtractorBot - a python script that is used to fetch all the question from the [NeetCode](#https://neetcode.io/practice) website and arranged them in a json file.  
- To use the script get inside the Extractor directory and creating your own question Json file by running the following commands:
+ To use the script go inside the Extractor directory and create your own question Json file by running the following commands:
 
 ```
  cd QuestionExtractor/
