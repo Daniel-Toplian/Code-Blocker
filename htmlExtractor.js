@@ -11,7 +11,7 @@ function getQuestionStatus() {
       })
 
       resolve(false)
-    }, 1000)
+    }, 500)
   })
 }
 
