@@ -17,6 +17,7 @@ function requestDiffChange(difficulty) {
     (response) => {
       if (response) {
         console.log(response)
+        window.close()
       }
     }
   )
