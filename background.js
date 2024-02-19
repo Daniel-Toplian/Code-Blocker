@@ -160,10 +160,6 @@ async function getRandomQuestion() {
   }
 }
 
-// How does it work?
-// requesting the question solved state by creating a new tab with the question url
-// Then injecting the the 'htmlExtractor.js' script inside the tab.
-// After the script is injected, I can run a spcific method using args from the outside
 function requestQuestionStatus(questionUrl) {
   return new Promise((resolve, reject) => {
     chrome.tabs.create({ url: questionUrl, active: false }, (tab) => {
