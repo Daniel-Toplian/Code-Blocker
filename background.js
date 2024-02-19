@@ -1,6 +1,7 @@
 let isPassed = false
 let todaysQuestion = null
 let questionDifficulty = 'Random'
+let isStautsTabAlive = false
 const difficulties = ['Easy', 'Medium', 'Hard', 'Random']
 
 // event handlers
@@ -164,22 +165,28 @@ async function getRandomQuestion() {
 
 function requestQuestionStatus(questionUrl) {
   return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url: questionUrl, active: false }, (tab) => {
-      chrome.scripting
-        .executeScript({
-          target: { tabId: tab.id },
-          files: ['htmlExtractor.js'],
-        })
-        .then(() => {
-          try {
-            if (tab.id != 0) {
-              chrome.tabs.remove(tab.id)
+    if (isStautsTabAlive) {
+      resolve()
+    } else {
+      chrome.tabs.create({ url: questionUrl, active: false }, (tab) => {
+        isStautsTabAlive = true
+        chrome.scripting
+          .executeScript({
+            target: { tabId: tab.id },
+            files: ['htmlExtractor.js'],
+          })
+          .then(() => {
+            try {
+              if (tab.id != 0) {
+                chrome.tabs.remove(tab.id)
+                isStautsTabAlive = false
+              }
+              resolve()
+            } catch (error) {
+              reject(error)
             }
-            resolve()
-          } catch (error) {
-            reject(error)
-          }
-        })
-    })
+          })
+      })
+    }
   })
 }
