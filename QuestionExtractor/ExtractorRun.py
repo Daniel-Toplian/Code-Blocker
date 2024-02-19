@@ -67,14 +67,16 @@ def extract_leetcode_questions():
     reach_to_questions()
     page_source = driver.page_source
     soup = BeautifulSoup(page_source, 'html.parser')
-    questions = soup.findAll('a', {"class": "table-text text-color"})
-    questions_diff = soup.findAll('button', {"id": "diff-btn"})
+    questions = soup.findAll('tr', {"class": "ng-star-inserted"})
 
     questions_data = []
     question_id = 0
-    for question, question_diff in zip(questions, questions_diff):
-        questions_data.append(QuestionData(id_number=question_id, name=question.text, difficulty=question_diff.text,
-                                           link=question.get("href")))
+    for question in questions:
+        question_name = question.find('a').text
+        question_diff = question.find('button').text
+        question_link = question.find('a').get("href")
+        questions_data.append(QuestionData(id_number=question_id, name=question_name, difficulty=question_diff,
+                                           link=question_link))
         question_id = question_id + 1
 
     write_to_file(questions_data)
