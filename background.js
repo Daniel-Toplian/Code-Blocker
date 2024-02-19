@@ -34,31 +34,32 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // on difficulty change
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type == 'difficultyChange') {
-    let error = 'difficulty is null'
-    if (message.difficulty) {
-      if (difficulties.includes(message.difficulty)) {
+    let errorMessage = 'Unable to change difficulty, error: '
+    if (!message.difficulty) {
+      sendResponse(errorMessage + 'difficulty is null')
+    } else {
+      if (!difficulties.includes(message.difficulty)) {
+        sendResponse(errorMessage + 'an unfamiliar difficulty was recieved')
+      } else {
+        let oldDiff = questionDifficulty
         questionDifficulty = message.difficulty
-        if (questionDifficulty == 'Random') {
-          getRandomQuestion()
-            .then(() => {
-              execute()
-              sendResponse('Difficulty has been changed!')
-              return
-            })
-            .catch((error) => {
-              sendResponse('Error changing difficulty: ' + error)
-            })
-        }
-
-        execute()
-        sendResponse('Difficulty has been changed!')
-        return
+        getRandomQuestion()
+          .then(() => {
+            execute()
+            isPassed = false
+            sendResponse(
+              'Difficulty has been changed from ' +
+                oldDiff +
+                ' to ' +
+                questionDifficulty
+            )
+          })
+          .catch((error) => {
+            sendResponse(errorMessage + error)
+          })
+        return true
       }
-
-      error = 'an unfamiliar difficulty was recieved'
     }
-
-    sendResponse('Unable to change difficulty, error: ' + error)
   }
 })
 
@@ -66,9 +67,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.type === 'questionStatus') {
     try {
-      console.log('response for requesting questionStatus')
       isPassed = await message.status
-      console.log(isPassed)
       let currentTab = await getCurrentTab()
 
       if (!currentTab.url.includes(todaysQuestion.link) && !isPassed) {
@@ -141,9 +140,13 @@ async function getRandomQuestion() {
       throw new Error(`Failed to fetch ${filePath}: ${response.statusText}`)
     }
 
-    let questions = await response.json()
-    if (questionDifficulty != 'Random') {
-      questions = questions.filter(function (q) {
+    const allQuestions = await response.json()
+    let questions
+
+    if (questionDifficulty == 'Random') {
+      questions = allQuestions
+    } else {
+      questions = allQuestions.filter(function (q) {
         return q.difficulty == questionDifficulty
       })
     }
