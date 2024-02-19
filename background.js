@@ -151,7 +151,6 @@ async function getRandomQuestion() {
 
     const randomIndex = Math.floor(Math.random() * questionsAmount)
     const randomQuestion = questions[randomIndex]
-    // const randomQuestion = questions[6]
 
     todaysQuestion = randomQuestion
     return todaysQuestion
