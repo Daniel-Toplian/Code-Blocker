@@ -11,7 +11,7 @@ A Chrome extension that helps you prepare for job interviews by blocking distrac
 
 ## Features
 
-![Screenshot](title.png)
+![Screenshot](src/assets/title.png)
 
 - The extension prevents you from browsing the web by continuously redirecting your current tab to a random LeetCode question until you complete it.
 - It prompts you to answer one question per day.
